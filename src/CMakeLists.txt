@@ -50,7 +50,6 @@ target_link_libraries(keepsecret PRIVATE
     KF6::ConfigCore
     KF6::ConfigGui
     KF6::I18nQml
-    KF6::Crash
     Qt::DBus
     PkgConfig::LIBSECRET
 )
@@ -72,8 +71,8 @@ else()
 endif()
 
 kconfig_target_kcfg_file(keepsecret
-    FILE keepsecretconfig.kcfg
-    CLASS_NAME KeepsecretConfig
+    FILE KeepSecretConfig.kcfg
+    CLASS_NAME KeepSecretConfig
     GENERATE_MOC
     MUTATORS
     DEFAULT_VALUE_GETTERS
@@ -82,5 +81,6 @@ kconfig_target_kcfg_file(keepsecret
     SINGLETON
     QML_REGISTRATION
 )
+
 
 install(TARGETS keepsecret ${KDE_INSTALL_TARGETS_DEFAULT_ARGS})

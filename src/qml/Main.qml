@@ -25,17 +25,77 @@ Kirigami.ApplicationWindow {
 
     readonly property real minimumSidebarWidth: pageStack.defaultColumnWidth / 2
     readonly property real maximumSidebarWidth: (width - pageStack.defaultColumnWidth) / 2
+    readonly property int walletCount: App.collectionsModel.count()
+    readonly property bool shouldHideSidebar: walletCount === 1
+    function isSidebarInStack() {
+        return pageStack.pages.indexOf(collectionListPage) !== -1
+    }
+
 
     Component.onCompleted: {
-        if (width >= pageStack.defaultColumnWidth * 2 ) {
-            pageStack.insertPage(1, collectionContentsPage);
-        }
-        pageStack.columnView.savedState = App.sidebarState;
-        collectionListPage.forceActiveFocus();
+        
+
+        pageStack.columnView.savedState = App.sidebarState
+
+        // Let a single function decide sidebar presence
+        Qt.callLater(updateSidebarVisibility)
     }
+    function updateSidebarVisibility() {
+        const sidebarPresent = isSidebarInStack()
+
+        if (shouldHideSidebar) {
+            // Auto-select the only wallet
+            if (walletCount === 1) {
+                const idx = App.collectionsModel.index(0, 0)
+                App.collectionModel.collectionPath =
+                    App.collectionsModel.data(idx, CollectionsModel.DbusPathRole)
+            }
+
+            // Ensure contents page is the ONLY page
+            if (!pageStack.pages.includes(collectionContentsPage)) {
+                pageStack.insertPage(0, collectionContentsPage)
+            }
+
+            if (sidebarPresent) {
+                pageStack.removePage(collectionListPage)
+            }
+
+        } else {
+            // Multiple wallets → restore sidebar
+            if (!sidebarPresent) {
+                pageStack.insertPage(0, collectionListPage)
+            }
+        }
+    }
+
+
+
+
+    // Also update when wallet count property changes (QML binding)
+    onWalletCountChanged: {
+        Qt.callLater(updateSidebarVisibility);
+    }
+    Connections {
+        target: App.collectionsModel
+
+        function onModelReset() {
+            Qt.callLater(updateSidebarVisibility)
+        }
+
+        function onRowsInserted() {
+            Qt.callLater(updateSidebarVisibility)
+        }
+
+        function onRowsRemoved() {
+            Qt.callLater(updateSidebarVisibility)
+        }
+    }
+
+    
 
     globalDrawer: Kirigami.GlobalDrawer {
         isMenu: !Kirigami.Settings.isMobile
+        visible: !shouldHideSidebar
         actions: [
             Kirigami.Action {
                 text: i18nc("@action:inMenu", "Report Bug...")
@@ -62,6 +122,12 @@ Kirigami.ApplicationWindow {
                 text: i18nc("@action:inMenu", "About KDE")
                 icon.name: "kde"
                 onTriggered: root.pageStack.pushDialogLayer(Qt.createComponent("org.kde.kirigamiaddons.formcard", "AboutKDEPage"))
+            },
+            Kirigami.Action {
+                text: i18nc("@action:inMenu", "New Wallet")
+                icon.name: "list-add-symbolic"  
+                onTriggered: walletCreationDialog.open()
+            
             }
         ]
     }
@@ -71,7 +137,8 @@ Kirigami.ApplicationWindow {
     }
 
     pageStack {
-        initialPage: collectionListPage
+        initialPage: shouldHideSidebar ? collectionContentsPage : collectionListPage
+
         columnView.columnResizeMode: pageStack.wideMode ? Kirigami.ColumnView.DynamicColumns : Kirigami.ColumnView.SingleColumn
         columnView.onSavedStateChanged: {
             App.sidebarState = pageStack.columnView.savedState;
@@ -129,6 +196,50 @@ Kirigami.ApplicationWindow {
         }
 
         onAccepted: acceptedCallback()
+    }
+
+    QQC.Dialog {
+        id: walletCreationDialog
+        modal: true
+        title: i18nc("@title:window", "Create a New Wallet")
+        standardButtons: QQC.Dialog.Save | QQC.Dialog.Cancel
+
+        function checkSaveEnabled() {
+            let button = standardButton(QQC.Dialog.Save);
+            button.enabled = walletNameField.text.length > 0;
+        }
+
+        function maybeAccept() {
+            let button = standardButton(QQC.Dialog.Save);
+            if (button.enabled) {
+                accept();
+            }
+        }
+        Component.onCompleted: standardButton(QQC.Dialog.Save).enabled = false
+
+        contentItem: ColumnLayout {
+            QQC.Label {
+                text: i18nc("@label:textbox", "Wallet name:")
+            }
+            QQC.TextField {
+                id: walletNameField
+                Layout.fillWidth: true
+                onVisibleChanged: {
+                    if (visible) {
+                        forceActiveFocus();
+                    }
+                }
+                onTextChanged: walletCreationDialog.checkSaveEnabled()
+                onAccepted: walletCreationDialog.maybeAccept()
+            }
+        }
+
+        onAccepted: App.secretService.createCollection(walletNameField.text)
+        onVisibleChanged: {
+            if (!visible) {
+                walletNameField.text = ""
+            }
+        }
     }
 
     Connections {
@@ -196,28 +307,27 @@ Kirigami.ApplicationWindow {
         Kirigami.ColumnView.minimumWidth: minimumSidebarWidth
         Kirigami.ColumnView.maximumWidth: maximumSidebarWidth
         onCollectionPathChanged: {
-            collectionContentsPage.currentEntry = -1
-            if (collectionPath.length >= 0) {
-                if (pageStack.depth < 2) {
-                    pageStack.insertPage(1, collectionContentsPage)
-                }
+            if (root.shouldHideSidebar) {
+                return; 
+            }
 
+            collectionContentsPage.currentEntry = -1
+
+            if (collectionPath && collectionPath.length > 0) {
                 if (!pageStack.wideMode) {
-                    pageStack.currentIndex = 1;
+                    pageStack.currentIndex = 1
                 }
-            } else if (pageStack.wideMode) {
-                pageStack.currentIndex = 0;
-            } else {
-                pageStack.pop(collectionListPage)
             }
         }
+
+
     }
 
     CollectionContentsPage {
         id: collectionContentsPage
-        visible: false
         Kirigami.ColumnView.fillWidth: true
-        Kirigami.ColumnView.reservedSpace: collectionListPage.width + (pageStack.depth === 3 ? entryPage.width : 0)
+        Kirigami.ColumnView.reservedSpace:(isSidebarInStack() ? collectionListPage.width : 0)+ (pageStack.depth === 3 ? entryPage.width : 0)
+
         onCurrentEntryChanged: {
             if (currentEntry > -1) {
                 if (!pageStack.wideMode) {
@@ -248,11 +358,11 @@ Kirigami.ApplicationWindow {
     EntryPage {
         id: entryPage
         Kirigami.ColumnView.minimumWidth: minimumSidebarWidth
-        Kirigami.ColumnView.maximumWidth: root.width - collectionListPage.width - root.pageStack.defaultColumnWidth
+        Kirigami.ColumnView.maximumWidth:root.width - (isSidebarInStack() ? collectionListPage.width : 0) - root.pageStack.defaultColumnWidth
+
         // An arbitrary big width by default
         Kirigami.ColumnView.preferredWidth: Kirigami.Units.gridUnit * 30
         Kirigami.ColumnView.interactiveResizeEnabled: true
         Kirigami.ColumnView.fillWidth: false
-        visible: false
     }
 }

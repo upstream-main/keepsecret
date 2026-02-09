@@ -85,7 +85,7 @@ int main(int argc, char *argv[])
 #endif
 
     QQmlApplicationEngine engine;
-    engine.rootContext()->setContextObject(new KLocalizedQmlContext(&engine));
+    engine.rootContext()->setContextObject(new KLocalizedQmlContext(&engine));  
     engine.loadFromModule("org.kde.keepsecret", u"Main");
 
     if (engine.rootObjects().isEmpty()) {

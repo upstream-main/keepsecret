@@ -25,7 +25,19 @@ Kirigami.ScrollablePage {
         }
     }
 
+    
+
     actions: [
+        Kirigami.Action {
+            id: newWalletAction
+            text: i18nc("@action:button", "New Wallet")
+            icon.name: "list-add-symbolic"
+            visible: page.Window.window.shouldHideSidebar
+         && !page.Window.window.isSidebarInStack()
+
+            onTriggered: page.Window.window.walletCreationDialog.open()
+        },
+
         Kirigami.Action {
             id: newAction
             text: i18nc("@action:button Create a new secret", "New Entry")
@@ -228,9 +240,12 @@ Kirigami.ScrollablePage {
             icon.name: "configure-symbolic"
             onClicked: {
                 view.currentIndex = contextMenu.model.index
-                App.secretItem.loadItem(App.collectionModel.collectionPath, contextMenu.model.dbusPath);
-                Kirigami.PageStack.pageStack.currentIndex = 2;
+                App.secretItem.loadItem(
+                    App.collectionModel.collectionPath,
+                    contextMenu.model.dbusPath
+                );
             }
+
         }
     }
 
@@ -267,18 +282,16 @@ Kirigami.ScrollablePage {
             text: model.display
             highlighted: view.currentIndex == index
 
+            
             function click() {
                 if (contextMenu.visible) {
                     return;
                 }
                 view.currentIndex = index
                 App.secretItem.loadItem(App.collectionModel.collectionPath, model.dbusPath);
-                if (!Kirigami.PageStack.pageStack.wideMode) {
-                    Kirigami.PageStack.pageStack.currentIndex = 2;
-                } else {
-                    view.forceActiveFocus();
-                }
+                view.forceActiveFocus();
             }
+
             onClicked: click()
             Keys.onPressed: (event) => {
                 if (contextMenu.visible) {

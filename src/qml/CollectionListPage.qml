@@ -12,66 +12,26 @@ Kirigami.ScrollablePage {
     id: page
 
     Kirigami.Theme.colorSet: Kirigami.Theme.Window
-    title: QQC.ApplicationWindow.window.pageStack.wideMode ? "" : i18nc("@title:window List of wallets", "Wallets")
+    title: i18nc("@title:window List of wallets", "Wallets")
+
+
 
     readonly property string collectionPath: App.collectionModel.collectionPath
 
     actions: [
+        
         Kirigami.Action {
             id: createAction
             text: i18nc("@action:button", "New Wallet")
             icon.name: "list-add-symbolic"
-            onTriggered: creationDialog.open()
+            onTriggered: page.Window.window.walletCreationDialog.open()
         }
+
     ]
 
     onFocusChanged: {
         if (focus) {
             view.forceActiveFocus();
-        }
-    }
-
-    QQC.Dialog {
-        id: creationDialog
-        modal: true
-        title: i18nc("@title:window", "Create a New Wallet")
-        standardButtons: QQC.Dialog.Save | QQC.Dialog.Cancel
-
-        function checkSaveEnabled() {
-            let button = standardButton(QQC.Dialog.Save);
-            button.enabled = collectionNameField.text.length > 0;
-        }
-
-        function maybeAccept() {
-            let button = standardButton(QQC.Dialog.Save);
-            if (button.enabled) {
-                accept();
-            }
-        }
-
-        Component.onCompleted: standardButton(QQC.Dialog.Save).enabled = false
-
-        contentItem: ColumnLayout {
-            QQC.Label {
-                text: i18nc("@label:textbox", "Wallet name:")
-            }
-            QQC.TextField {
-                id: collectionNameField
-                Layout.fillWidth: true
-                onVisibleChanged: {
-                    if (visible) {
-                        forceActiveFocus();
-                    }
-                }
-                onTextChanged: creationDialog.checkSaveEnabled()
-                onAccepted: creationDialog.maybeAccept()
-            }
-        }
-
-        onAccepted: App.secretService.createCollection(collectionNameField.text)
-        onVisibleChanged: {
-            console.log("resetting")
-            collectionNameField.text = ""
         }
     }
 
@@ -131,17 +91,15 @@ Kirigami.ScrollablePage {
             highlighted: view.currentIndex == index
             font.bold: App.secretService.defaultCollection === model.dbusPath
 
+            
             function click() {
                 if (contextMenu.visible) {
                     return;
                 }
                 App.collectionModel.collectionPath = model.dbusPath;
-                if (!Kirigami.PageStack.pageStack.wideMode) {
-                    Kirigami.PageStack.pageStack.currentIndex = 1;
-                } else {
-                    view.forceActiveFocus();
-                }
+                view.forceActiveFocus();
             }
+
             onClicked: click()
             Keys.onPressed: (event) => {
                 if (!view.activeFocus) {
@@ -193,13 +151,15 @@ Kirigami.ScrollablePage {
                 right: parent.right
                 bottom: parent.bottom
             }
-            visible: !QQC.ApplicationWindow.window.pageStack.wideMode
+            visible: true
             width: Math.round(Math.min(parent.width, parent.height) * 0.8)
             height: width
             sourceSize.width: width
             sourceSize.height: height
             source: visible ? "qrc:/watermark.svg" : ""
         }
+        
+
     }
     KAC.FloatingButton {
         parent: page
