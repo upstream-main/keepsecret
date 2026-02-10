@@ -12,6 +12,9 @@ class CollectionsModel : public QAbstractListModel
 {
     Q_OBJECT
 
+    // Exposed to QML so we can react to the number of wallets
+    Q_PROPERTY(int count READ count NOTIFY countChanged)
+
     Q_PROPERTY(int currentIndex READ currentIndex NOTIFY currentIndexChanged)
 
 public:
@@ -29,12 +32,16 @@ public:
 
     int currentIndex() const;
 
+    // Helper for QML to read the number of wallets
+    int count() const;
+
     QHash<int, QByteArray> roleNames() const override;
     int rowCount(const QModelIndex &parent = QModelIndex()) const override;
     QVariant data(const QModelIndex &index, int role = Qt::DisplayRole) const override;
 
 Q_SIGNALS:
     void currentIndexChanged();
+    void countChanged();
 
 protected:
     void reloadWallets();

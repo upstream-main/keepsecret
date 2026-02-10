@@ -71,8 +71,8 @@ else()
 endif()
 
 kconfig_target_kcfg_file(keepsecret
-    FILE KeepSecretConfig.kcfg
-    CLASS_NAME KeepSecretConfig
+    FILE keepsecretconfig.kcfg
+    CLASS_NAME keepsecretConfig
     GENERATE_MOC
     MUTATORS
     DEFAULT_VALUE_GETTERS

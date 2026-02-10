@@ -16,6 +16,8 @@ CollectionsModel::CollectionsModel(SecretServiceClient *secretServiceClient, QOb
             beginResetModel();
             m_wallets.clear();
             endResetModel();
+            Q_EMIT currentIndexChanged();
+            Q_EMIT countChanged();
         }
     });
 
@@ -24,6 +26,11 @@ CollectionsModel::CollectionsModel(SecretServiceClient *secretServiceClient, QOb
 
 CollectionsModel::~CollectionsModel()
 {
+}
+
+int CollectionsModel::count() const
+{
+    return m_wallets.count();
 }
 
 QString CollectionsModel::collectionPath() const
@@ -101,6 +108,7 @@ void CollectionsModel::reloadWallets()
     }
     endResetModel();
     Q_EMIT currentIndexChanged();
+    Q_EMIT countChanged();
 }
 
 #include "moc_collectionsmodel.cpp"
