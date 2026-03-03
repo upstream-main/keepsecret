@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: BSD-2-Clause
 # SPDX-FileCopyrightText: 2025 Marco Martin <notmart@gmail.com>
 
-add_executable(Keepsecret)
+add_executable(keepsecret)
 qt_add_qml_module(keepsecret URI org.kde.keepsecret
     QML_FILES
         qml/Main.qml
@@ -71,7 +71,7 @@ else()
 endif()
 
 kconfig_target_kcfg_file(keepsecret
-    FILE keepsecretConfig.kcfg
+    FILE keepsecretconfig.kcfg
     CLASS_NAME keepsecretConfig
     GENERATE_MOC
     MUTATORS
