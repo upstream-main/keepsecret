@@ -10,13 +10,18 @@ import org.kde.keepsecret
 
 Kirigami.ScrollablePage {
     id: page
+    property int walletCount: App.collectionsModel.count
 
+    property bool shouldShowWatermark:
+        !Kirigami.PageStack.pageStack.wideMode && walletCount > 1
     Kirigami.Theme.colorSet: Kirigami.Theme.Window
     title: i18nc("@title:window List of wallets", "Wallets")
 
+    visible: !page.Window.window.shouldHideSidebar
+    Kirigami.ColumnView.minimumWidth: page.Window.window.shouldHideSidebar ? 0 : page.Window.window.minimumSidebarWidth
+    Kirigami.ColumnView.maximumWidth: page.Window.window.shouldHideSidebar ? 0 : page.Window.window.maximumSidebarWidth
 
 
-    readonly property string collectionPath: App.collectionModel.collectionPath
 
     actions: [
         
@@ -98,6 +103,9 @@ Kirigami.ScrollablePage {
                 }
                 App.collectionModel.collectionPath = model.dbusPath;
                 view.forceActiveFocus();
+                if (!Kirigami.PageStack.pageStack.wideMode) {
+                    Kirigami.PageStack.pageStack.currentIndex = 1;
+                }
             }
 
             onClicked: click()
@@ -151,7 +159,7 @@ Kirigami.ScrollablePage {
                 right: parent.right
                 bottom: parent.bottom
             }
-            visible: true
+            visible: page.shouldShowWatermark
             width: Math.round(Math.min(parent.width, parent.height) * 0.8)
             height: width
             sourceSize.width: width

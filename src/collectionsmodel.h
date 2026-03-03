@@ -35,6 +35,8 @@ public:
     // Helper for QML to read the number of wallets
     int count() const;
 
+    Q_INVOKABLE QString dbusPathAt(int row) const;
+
     QHash<int, QByteArray> roleNames() const override;
     int rowCount(const QModelIndex &parent = QModelIndex()) const override;
     QVariant data(const QModelIndex &index, int role = Qt::DisplayRole) const override;

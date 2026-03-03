@@ -99,6 +99,14 @@ QVariant CollectionsModel::data(const QModelIndex &index, int role) const
     }
 }
 
+QString CollectionsModel::dbusPathAt(int row) const
+{
+    if (row < 0 || row >= m_wallets.count()) {
+        return QString();
+    }
+    return m_wallets[row].dbusPath;
+}
+
 void CollectionsModel::reloadWallets()
 {
     beginResetModel();

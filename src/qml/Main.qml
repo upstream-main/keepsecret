@@ -25,54 +25,53 @@ Kirigami.ApplicationWindow {
 
     readonly property real minimumSidebarWidth: pageStack.defaultColumnWidth / 2
     readonly property real maximumSidebarWidth: (width - pageStack.defaultColumnWidth) / 2
-    readonly property int walletCount: App.collectionsModel.count()
-    readonly property bool shouldHideSidebar: walletCount === 1
-    function isSidebarInStack() {
-        return pageStack.pages.indexOf(collectionListPage) !== -1
+    readonly property int walletCount: App.collectionsModel.count
+    readonly property bool shouldHideSidebar: walletCount <= 1
+    property list<Item> pages: {
+        let result = []
+        if (!shouldHideSidebar && collectionListLoader.item) {
+            result.push(collectionListLoader.item)
+        }
+        result.push(collectionContentsPage)
+        return result
     }
-
-
-    Component.onCompleted: {
-        
-
-        pageStack.columnView.savedState = App.sidebarState
-
-        // Let a single function decide sidebar presence
-        Qt.callLater(updateSidebarVisibility)
-    }
-    function updateSidebarVisibility() {
-        const sidebarPresent = isSidebarInStack()
-
-        if (shouldHideSidebar) {
-            // Auto-select the only wallet
-            if (walletCount === 1) {
-                const idx = App.collectionsModel.index(0, 0)
-                App.collectionModel.collectionPath =
-                    App.collectionsModel.data(idx, CollectionsModel.DbusPathRole)
+    onPagesChanged: {
+        // Remove pages not in desired list
+        const currentPages = pageStack.pages.slice()
+        for (let p of currentPages) {
+            if (!pages.includes(p)) {
+                pageStack.removePage(p)
             }
+        }
 
-            // Ensure contents page is the ONLY page
-            if (!pageStack.pages.includes(collectionContentsPage)) {
-                pageStack.insertPage(0, collectionContentsPage)
-            }
-
-            if (sidebarPresent) {
-                pageStack.removePage(collectionListPage)
-            }
-
-        } else {
-            // Multiple wallets → restore sidebar
-            if (!sidebarPresent) {
-                pageStack.insertPage(0, collectionListPage)
+        // Insert missing pages in right order
+        for (let i = 0; i < pages.length; ++i) {
+            if (!pageStack.pages.includes(pages[i])) {
+                pageStack.insertPage(i, pages[i])
             }
         }
     }
 
 
-
-
+    Component.onCompleted: {
+        pageStack.clear()
+        for (let i = 0; i < pages.length; ++i) {
+            pageStack.insertPage(i, pages[i])
+        }
+        pageStack.columnView.savedState = shouldHideSidebar ? "" : App.sidebarState
+        Qt.callLater(updateSidebarVisibility)
+    }
+    function updateSidebarVisibility() {
+        if (shouldHideSidebar && walletCount === 1) {
+            const path = App.collectionsModel.dbusPathAt(0)
+            if (path && path.length > 0) {
+                App.collectionModel.collectionPath = path
+            }
+        }
+    }
     // Also update when wallet count property changes (QML binding)
     onWalletCountChanged: {
+        console.log("walletCount changed:", walletCount)
         Qt.callLater(updateSidebarVisibility);
     }
     Connections {
@@ -137,11 +136,14 @@ Kirigami.ApplicationWindow {
     }
 
     pageStack {
-        initialPage: shouldHideSidebar ? collectionContentsPage : collectionListPage
-
-        columnView.columnResizeMode: pageStack.wideMode ? Kirigami.ColumnView.DynamicColumns : Kirigami.ColumnView.SingleColumn
+        id: pageStack
+        columnView.columnResizeMode: shouldHideSidebar
+            ? Kirigami.ColumnView.SingleColumn
+            : (pageStack.wideMode ? Kirigami.ColumnView.DynamicColumns : Kirigami.ColumnView.SingleColumn)
         columnView.onSavedStateChanged: {
-            App.sidebarState = pageStack.columnView.savedState;
+            if (!shouldHideSidebar) {
+                App.sidebarState = pageStack.columnView.savedState;
+            }
         }
         globalToolBar {
             style: Kirigami.ApplicationHeaderStyle.ToolBar
@@ -301,32 +303,32 @@ Kirigami.ApplicationWindow {
         }
     }
 
-    CollectionListPage {
-        id: collectionListPage
-        Kirigami.ColumnView.interactiveResizeEnabled: true
-        Kirigami.ColumnView.minimumWidth: minimumSidebarWidth
-        Kirigami.ColumnView.maximumWidth: maximumSidebarWidth
-        onCollectionPathChanged: {
-            if (root.shouldHideSidebar) {
-                return; 
-            }
-
-            collectionContentsPage.currentEntry = -1
-
-            if (collectionPath && collectionPath.length > 0) {
-                if (!pageStack.wideMode) {
-                    pageStack.currentIndex = 1
+    Loader {
+        id: collectionListLoader
+        active: !shouldHideSidebar
+        sourceComponent: CollectionListPage {
+            id: collectionListPage
+            Kirigami.ColumnView.interactiveResizeEnabled: true
+            Kirigami.ColumnView.minimumWidth: minimumSidebarWidth
+            Kirigami.ColumnView.maximumWidth: maximumSidebarWidth
+            onCollectionPathChanged: {
+                if (root.shouldHideSidebar) {
+                    return;
+                }
+                collectionContentsPage.currentEntry = -1
+                if (collectionPath && collectionPath.length > 0) {
+                    if (!pageStack.wideMode) {
+                        pageStack.currentIndex = 1
+                    }
                 }
             }
         }
-
-
     }
 
     CollectionContentsPage {
         id: collectionContentsPage
         Kirigami.ColumnView.fillWidth: true
-        Kirigami.ColumnView.reservedSpace:(isSidebarInStack() ? collectionListPage.width : 0)+ (pageStack.depth === 3 ? entryPage.width : 0)
+        Kirigami.ColumnView.reservedSpace:(collectionListLoader.item ? collectionListLoader.item.width : 0)+ (pageStack.depth === 3 ? entryPage.width : 0)
 
         onCurrentEntryChanged: {
             if (currentEntry > -1) {
@@ -358,7 +360,7 @@ Kirigami.ApplicationWindow {
     EntryPage {
         id: entryPage
         Kirigami.ColumnView.minimumWidth: minimumSidebarWidth
-        Kirigami.ColumnView.maximumWidth:root.width - (isSidebarInStack() ? collectionListPage.width : 0) - root.pageStack.defaultColumnWidth
+        Kirigami.ColumnView.maximumWidth:root.width - (collectionListLoader.item ? collectionListLoader.item.width : 0) - root.pageStack.defaultColumnWidth
 
         // An arbitrary big width by default
         Kirigami.ColumnView.preferredWidth: Kirigami.Units.gridUnit * 30
