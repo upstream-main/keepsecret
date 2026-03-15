@@ -33,9 +33,8 @@ Kirigami.ScrollablePage {
             text: i18nc("@action:button", "New Wallet")
             icon.name: "list-add-symbolic"
             visible: page.Window.window.shouldHideSidebar
-         && !page.Window.window.isSidebarInStack()
 
-            onTriggered: page.Window.window.walletCreationDialog.open()
+            onTriggered: page.Window.window.openWalletCreationDialog()
         },
 
         Kirigami.Action {

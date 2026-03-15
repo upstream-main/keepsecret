@@ -29,16 +29,19 @@ Kirigami.ApplicationWindow {
     readonly property bool shouldHideSidebar: walletCount <= 1
     property list<Item> pages: {
         let result = []
-        if (!shouldHideSidebar && collectionListLoader.item) {
+        const itemOpen = App.stateTracker.status & StateTracker.ItemReady
+        if (!shouldHideSidebar && collectionListLoader.item){
             result.push(collectionListLoader.item)
         }
         result.push(collectionContentsPage)
+        if (itemOpen) {
+            result.push(entryPage)
+        }
         return result
     }
     onPagesChanged: {
         // Remove pages not in desired list
-        const currentPages = pageStack.pages.slice()
-        for (let p of currentPages) {
+        for (let p of pageStack.items) {
             if (!pages.includes(p)) {
                 pageStack.removePage(p)
             }
@@ -46,7 +49,7 @@ Kirigami.ApplicationWindow {
 
         // Insert missing pages in right order
         for (let i = 0; i < pages.length; ++i) {
-            if (!pageStack.pages.includes(pages[i])) {
+            if (!pageStack.items.includes(pages[i])) {
                 pageStack.insertPage(i, pages[i])
             }
         }
@@ -160,7 +163,7 @@ Kirigami.ApplicationWindow {
         type: Kirigami.MessageType.Error
         text: visible ? App.stateTracker.errorMessage : ""
     }
-
+    function openWalletCreationDialog() { walletCreationDialog.open() }
     function showDeleteDialog(title, message, confirmationMessage, callback) {
         deleteDialog.title = title
         deleteDialog.message = message;
@@ -311,17 +314,6 @@ Kirigami.ApplicationWindow {
             Kirigami.ColumnView.interactiveResizeEnabled: true
             Kirigami.ColumnView.minimumWidth: minimumSidebarWidth
             Kirigami.ColumnView.maximumWidth: maximumSidebarWidth
-            onCollectionPathChanged: {
-                if (root.shouldHideSidebar) {
-                    return;
-                }
-                collectionContentsPage.currentEntry = -1
-                if (collectionPath && collectionPath.length > 0) {
-                    if (!pageStack.wideMode) {
-                        pageStack.currentIndex = 1
-                    }
-                }
-            }
         }
     }
 
@@ -331,10 +323,8 @@ Kirigami.ApplicationWindow {
         Kirigami.ColumnView.reservedSpace:(collectionListLoader.item ? collectionListLoader.item.width : 0)+ (pageStack.depth === 3 ? entryPage.width : 0)
 
         onCurrentEntryChanged: {
-            if (currentEntry > -1) {
-                if (!pageStack.wideMode) {
-                    pageStack.currentIndex = 2;
-                }
+            if (currentEntry > -1 && !pageStack.wideMode) {
+                pageStack.currentIndex = 2;
             } else if (pageStack.depth == 3 && pageStack.depth > 1) {
                 pageStack.pop(collectionContentsPage)
             }
