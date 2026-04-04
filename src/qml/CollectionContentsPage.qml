@@ -25,7 +25,6 @@ Kirigami.ScrollablePage {
         }
     }
 
-    
 
     actions: [
         Kirigami.Action {

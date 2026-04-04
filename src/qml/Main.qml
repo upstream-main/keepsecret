@@ -30,7 +30,7 @@ Kirigami.ApplicationWindow {
     property list<Item> pages: {
         let result = []
         const itemOpen = App.stateTracker.status & StateTracker.ItemReady
-        if (!shouldHideSidebar && collectionListLoader.item){
+        if (!shouldHideSidebar && collectionListLoader.item) {
             result.push(collectionListLoader.item)
         }
         result.push(collectionContentsPage)
@@ -39,42 +39,43 @@ Kirigami.ApplicationWindow {
         }
         return result
     }
+    property bool updatingPages: false
     onPagesChanged: {
-        // Remove pages not in desired list
+        if(updatingPages) return
+        updatingPages = true
         for (let p of pageStack.items) {
             if (!pages.includes(p)) {
                 pageStack.removePage(p)
             }
         }
-
-        // Insert missing pages in right order
         for (let i = 0; i < pages.length; ++i) {
             if (!pageStack.items.includes(pages[i])) {
                 pageStack.insertPage(i, pages[i])
             }
         }
-    }
-
-
-    Component.onCompleted: {
-        pageStack.clear()
-        for (let i = 0; i < pages.length; ++i) {
-            pageStack.insertPage(i, pages[i])
+        if (pages.length > 1) {
+            Qt.callLater(() => {
+                pageStack.currentIndex = pages.length -1
+            })
         }
-        pageStack.columnView.savedState = shouldHideSidebar ? "" : App.sidebarState
-        Qt.callLater(updateSidebarVisibility)
+        updatingPages = false
     }
     function updateSidebarVisibility() {
-        if (shouldHideSidebar && walletCount === 1) {
+        if(shouldHideSidebar && walletCount === 1){
             const path = App.collectionsModel.dbusPathAt(0)
             if (path && path.length > 0) {
                 App.collectionModel.collectionPath = path
             }
         }
     }
+
+
+    Component.onCompleted: {
+        pageStack.columnView.savedState = shouldHideSidebar ? "" : App.sidebarState
+        Qt.callLater(updateSidebarVisibility)
+    }
     // Also update when wallet count property changes (QML binding)
     onWalletCountChanged: {
-        console.log("walletCount changed:", walletCount)
         Qt.callLater(updateSidebarVisibility);
     }
     Connections {
@@ -141,7 +142,7 @@ Kirigami.ApplicationWindow {
     pageStack {
         id: pageStack
         columnView.columnResizeMode: shouldHideSidebar
-            ? Kirigami.ColumnView.SingleColumn
+            ? Kirigami.ColumnView.DynamicColumns
             : (pageStack.wideMode ? Kirigami.ColumnView.DynamicColumns : Kirigami.ColumnView.SingleColumn)
         columnView.onSavedStateChanged: {
             if (!shouldHideSidebar) {
@@ -305,52 +306,30 @@ Kirigami.ApplicationWindow {
             }
         }
     }
-
-    Loader {
-        id: collectionListLoader
-        active: !shouldHideSidebar
-        sourceComponent: CollectionListPage {
-            id: collectionListPage
+    Component {
+        id: collectionListComponent
+        CollectionListPage {
             Kirigami.ColumnView.interactiveResizeEnabled: true
             Kirigami.ColumnView.minimumWidth: minimumSidebarWidth
             Kirigami.ColumnView.maximumWidth: maximumSidebarWidth
         }
     }
+    Loader {
+        id: collectionListLoader
+        active: !shouldHideSidebar
+        sourceComponent: collectionListComponent
+    }
 
     CollectionContentsPage {
         id: collectionContentsPage
         Kirigami.ColumnView.fillWidth: true
-        Kirigami.ColumnView.reservedSpace:(collectionListLoader.item ? collectionListLoader.item.width : 0)+ (pageStack.depth === 3 ? entryPage.width : 0)
-
-        onCurrentEntryChanged: {
-            if (currentEntry > -1 && !pageStack.wideMode) {
-                pageStack.currentIndex = 2;
-            } else if (pageStack.depth == 3 && pageStack.depth > 1) {
-                pageStack.pop(collectionContentsPage)
-            }
-        }
-        onStatusChanged: {
-            if (!(status & StateTracker.CollectionReady) && pageStack.depth > 1) {
-                pageStack.pop(collectionContentsPage)
-            } else if (App.stateTracker.status & StateTracker.ItemReady) {
-                if (pageStack.depth < 3) {
-                    pageStack.insertPage(2, entryPage);
-                    if (pageStack.wideMode) {
-                        collectionContentsPage.forceActiveFocus();
-                    } else {
-                        pageStack.currentIndex = 2;
-                    }
-                }
-            } else if (!pageStack.wideMode && pageStack.depth > 1) {
-                pageStack.pop(collectionContentsPage)
-            }
-        }
+        Kirigami.ColumnView.reservedSpace:(collectionListLoader.item ? collectionListLoader.item.width : 0)+ (pageStack.depth >= 2 ? entryPage.Kirigami.ColumnView.preferredWidth : 0)
     }
 
     EntryPage {
         id: entryPage
         Kirigami.ColumnView.minimumWidth: minimumSidebarWidth
-        Kirigami.ColumnView.maximumWidth:root.width - (collectionListLoader.item ? collectionListLoader.item.width : 0) - root.pageStack.defaultColumnWidth
+        Kirigami.ColumnView.maximumWidth: root.width - (collectionListLoader.item ? collectionListLoader.item.width : 0) - root.pageStack.defaultColumnWidth
 
         // An arbitrary big width by default
         Kirigami.ColumnView.preferredWidth: Kirigami.Units.gridUnit * 30

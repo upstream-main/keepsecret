@@ -13,7 +13,7 @@ Kirigami.ScrollablePage {
     property int walletCount: App.collectionsModel.count
 
     property bool shouldShowWatermark:
-        !Kirigami.PageStack.pageStack.wideMode && walletCount > 1
+        !(pageStack && pageStack.wideMode) && walletCount > 1
     Kirigami.Theme.colorSet: Kirigami.Theme.Window
     title: i18nc("@title:window List of wallets", "Wallets")
 
