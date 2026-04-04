@@ -39,6 +39,7 @@ ecm_qt_declare_logging_category(keepsecret
 )
 
 target_link_libraries(keepsecret PRIVATE
+    KF6::Crash
     Qt6::Core
     Qt6::Gui
     Qt6::Qml
