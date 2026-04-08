@@ -27,9 +27,9 @@ Kirigami.ApplicationWindow {
     readonly property real maximumSidebarWidth: (width - pageStack.defaultColumnWidth) / 2
     readonly property int walletCount: App.collectionsModel.count
     readonly property bool shouldHideSidebar: walletCount <= 1
-    property list<Item> pages: {
+    readonly property bool itemOpen: App.stateTracker.status & StateTracker.ItemReady
+    readonly property list<Item> desiredPages: {
         let result = []
-        const itemOpen = App.stateTracker.status & StateTracker.ItemReady
         if (!shouldHideSidebar && collectionListLoader.item) {
             result.push(collectionListLoader.item)
         }
@@ -39,26 +39,21 @@ Kirigami.ApplicationWindow {
         }
         return result
     }
-    property bool updatingPages: false
-    onPagesChanged: {
-        if(updatingPages) return
-        updatingPages = true
+
+    onDesiredPagesChanged: {
         for (let p of pageStack.items) {
-            if (!pages.includes(p)) {
+            if (!desiredPages.includes(p)) {
                 pageStack.removePage(p)
             }
         }
-        for (let i = 0; i < pages.length; ++i) {
-            if (!pageStack.items.includes(pages[i])) {
-                pageStack.insertPage(i, pages[i])
+        for (let i = 0; i < desiredPages.length; ++i) {
+            if (!pageStack.items.includes(desiredPages[i])) {
+                pageStack.insertPage(i, desiredPages[i])
             }
         }
-        if (pages.length > 1) {
-            Qt.callLater(() => {
-                pageStack.currentIndex = pages.length -1
-            })
-        }
-        updatingPages = false
+        Qt.callLater(() => {
+            pageStack.currentIndex = desiredPages.length - 1
+        })
     }
     function updateSidebarVisibility() {
         if(shouldHideSidebar && walletCount === 1){
@@ -68,8 +63,6 @@ Kirigami.ApplicationWindow {
             }
         }
     }
-
-
     Component.onCompleted: {
         pageStack.columnView.savedState = shouldHideSidebar ? "" : App.sidebarState
         Qt.callLater(updateSidebarVisibility)
@@ -80,25 +73,21 @@ Kirigami.ApplicationWindow {
     }
     Connections {
         target: App.collectionsModel
-
         function onModelReset() {
             Qt.callLater(updateSidebarVisibility)
         }
-
         function onRowsInserted() {
             Qt.callLater(updateSidebarVisibility)
         }
-
         function onRowsRemoved() {
             Qt.callLater(updateSidebarVisibility)
         }
     }
-
-    
-
     globalDrawer: Kirigami.GlobalDrawer {
         isMenu: !Kirigami.Settings.isMobile
-        visible: !shouldHideSidebar
+        modal: false
+        handleVisible: false
+        drawerOpen: false                          
         actions: [
             Kirigami.Action {
                 text: i18nc("@action:inMenu", "Report Bug...")
@@ -316,7 +305,7 @@ Kirigami.ApplicationWindow {
     }
     Loader {
         id: collectionListLoader
-        active: !shouldHideSidebar
+        active:  root.walletCount > 1
         sourceComponent: collectionListComponent
     }
 
