@@ -51,12 +51,14 @@ Kirigami.ApplicationWindow {
                 pageStack.insertPage(i, desiredPages[i])
             }
         }
-        Qt.callLater(() => {
-            pageStack.currentIndex = desiredPages.length - 1
-        })
+        if (App.collectionModel.collectionPath.length > 0) {
+            Qt.callLater(() => {
+                pageStack.currentIndex = desiredPages.length - 1
+            })
+        }
     }
     function updateSidebarVisibility() {
-        if(shouldHideSidebar && walletCount === 1){
+        if(walletCount === 1) {
             const path = App.collectionsModel.dbusPathAt(0)
             if (path && path.length > 0) {
                 App.collectionModel.collectionPath = path
@@ -305,20 +307,22 @@ Kirigami.ApplicationWindow {
     }
     Loader {
         id: collectionListLoader
-        active:  root.walletCount > 1
+        active: true
         sourceComponent: collectionListComponent
     }
+   
+   
 
     CollectionContentsPage {
         id: collectionContentsPage
         Kirigami.ColumnView.fillWidth: true
-        Kirigami.ColumnView.reservedSpace:(collectionListLoader.item ? collectionListLoader.item.width : 0)+ (pageStack.depth >= 2 ? entryPage.Kirigami.ColumnView.preferredWidth : 0)
+        Kirigami.ColumnView.reservedSpace: (root.walletCount > 1 && collectionListLoader.item ? collectionListLoader.item.width : 0) + (itemOpen ? entryPage.Kirigami.ColumnView.preferredWidth : 0)
     }
 
     EntryPage {
         id: entryPage
         Kirigami.ColumnView.minimumWidth: minimumSidebarWidth
-        Kirigami.ColumnView.maximumWidth: root.width - (collectionListLoader.item ? collectionListLoader.item.width : 0) - root.pageStack.defaultColumnWidth
+        Kirigami.ColumnView.maximumWidth: root.width - (root.walletCount > 1 && collectionListLoader.item ? collectionListLoader.item.width : 0) - root.pageStack.defaultColumnWidth
 
         // An arbitrary big width by default
         Kirigami.ColumnView.preferredWidth: Kirigami.Units.gridUnit * 30
