@@ -16,7 +16,7 @@ SPDX-FileCopyrightText = "Marco Martin <mart@kde.org>"
 SPDX-License-Identifier = "GPL-2.0-or-later"
 
 [[annotations]]
-path = ["org.kde.keepsecret.json", ".flatpak-manifest.json"]
+path = [".flatpak-manifest.json"]
 precedence = "aggregate"
 SPDX-FileCopyrightText = "Marco Martin <mart@kde.org>"
 SPDX-License-Identifier = "CC0-1.0"
