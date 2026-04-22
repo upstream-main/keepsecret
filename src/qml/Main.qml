@@ -28,18 +28,7 @@ Kirigami.ApplicationWindow {
     readonly property int walletCount: App.collectionsModel.count
     readonly property bool shouldHideSidebar: walletCount <= 1
     readonly property bool itemOpen: App.stateTracker.status & StateTracker.ItemReady
-    readonly property list<Item> desiredPages: {
-        let result = []
-        if (!shouldHideSidebar && collectionListLoader.item) {
-            result.push(collectionListLoader.item)
-        }
-        result.push(collectionContentsPage)
-        if (itemOpen) {
-            result.push(entryPage)
-        }
-        return result
-    }
-
+    property list<Item> desiredPages: []
     onDesiredPagesChanged: {
         for (let p of pageStack.items) {
             if (!desiredPages.includes(p)) {
@@ -51,12 +40,45 @@ Kirigami.ApplicationWindow {
                 pageStack.insertPage(i, desiredPages[i])
             }
         }
-        if (App.collectionModel.collectionPath.length > 0) {
-            Qt.callLater(() => {
-                pageStack.currentIndex = desiredPages.length - 1
-            })
-        }
     }
+    Item {
+        id: layoutStateMachine
+        states: [
+            State {
+                name: "multiWalletWithEntry"
+                when: !shouldHideSidebar && itemOpen && collectionListLoader.item !== null
+                PropertyChanges {
+                    target: root
+                    desiredPages: [collectionListLoader.item, collectionContentsPage, entryPage]
+                }
+            },
+            State {
+                name: "multiWallet"
+                when: !shouldHideSidebar && !itemOpen && collectionListLoader.item !== null
+                PropertyChanges {
+                    target: root
+                    desiredPages: [collectionListLoader.item, collectionContentsPage]
+                }
+            },
+            State {
+                name: "singleWalletWithEntry"
+                when: shouldHideSidebar && itemOpen
+                PropertyChanges {
+                    target: root
+                    desiredPages: [collectionContentsPage, entryPage]
+                }
+            },
+            State {
+                name: "singleWallet"
+                when: shouldHideSidebar && !itemOpen
+                PropertyChanges {
+                    target: root
+                    desiredPages: [collectionContentsPage]
+                }
+            }
+        ]
+    }
+
     function updateSidebarVisibility() {
         if(walletCount === 1) {
             const path = App.collectionsModel.dbusPathAt(0)
@@ -65,14 +87,16 @@ Kirigami.ApplicationWindow {
             }
         }
     }
+
     Component.onCompleted: {
         pageStack.columnView.savedState = shouldHideSidebar ? "" : App.sidebarState
         Qt.callLater(updateSidebarVisibility)
     }
-    // Also update when wallet count property changes (QML binding)
+
     onWalletCountChanged: {
-        Qt.callLater(updateSidebarVisibility);
+        Qt.callLater(updateSidebarVisibility) 
     }
+    
     Connections {
         target: App.collectionsModel
         function onModelReset() {
@@ -309,14 +333,23 @@ Kirigami.ApplicationWindow {
         id: collectionListLoader
         active: true
         sourceComponent: collectionListComponent
+        onLoaded: {
+            Qt.callLater(() => {
+                let temp = root.shouldHideSidebar
+            })
+        }
     }
-   
-   
 
     CollectionContentsPage {
         id: collectionContentsPage
         Kirigami.ColumnView.fillWidth: true
-        Kirigami.ColumnView.reservedSpace: (root.walletCount > 1 && collectionListLoader.item ? collectionListLoader.item.width : 0) + (itemOpen ? entryPage.Kirigami.ColumnView.preferredWidth : 0)
+        Kirigami.ColumnView.reservedSpace: {
+            let sidebarW = (!shouldHideSidebar && collectionListLoader.item && collectionListLoader.item.width > 0) 
+            ? collectionListLoader.item.width 
+            : (!shouldHideSidebar ? minimumSidebarWidth : 0)
+            let entryW = itemOpen ? entryPage.Kirigami.ColumnView.preferredWidth : 0
+            return sidebarW + entryW
+        }
     }
 
     EntryPage {

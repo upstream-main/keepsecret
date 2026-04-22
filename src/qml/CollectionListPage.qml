@@ -23,15 +23,13 @@ Kirigami.ScrollablePage {
 
 
 
-    actions: [
-        
+    actions: [ 
         Kirigami.Action {
             id: createAction
             text: i18nc("@action:button", "New Wallet")
             icon.name: "list-add-symbolic"
             onTriggered: page.Window.window.walletCreationDialog.open()
         }
-
     ]
 
     onFocusChanged: {
@@ -166,8 +164,6 @@ Kirigami.ScrollablePage {
             sourceSize.height: height
             source: visible ? "qrc:/watermark.svg" : ""
         }
-        
-
     }
     KAC.FloatingButton {
         parent: page

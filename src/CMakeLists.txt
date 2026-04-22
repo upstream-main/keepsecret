@@ -83,5 +83,4 @@ kconfig_target_kcfg_file(keepsecret
     QML_REGISTRATION
 )
 
-
 install(TARGETS keepsecret ${KDE_INSTALL_TARGETS_DEFAULT_ARGS})

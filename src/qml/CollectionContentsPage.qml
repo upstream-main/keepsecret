@@ -279,8 +279,7 @@ Kirigami.ScrollablePage {
             implicitHeight: Kirigami.Units.iconSizes.smallMedium + padding * 2
             text: model.display
             highlighted: view.currentIndex == index
-
-            
+ 
             function click() {
                 if (contextMenu.visible) {
                     return;
