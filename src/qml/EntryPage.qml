@@ -55,6 +55,9 @@ Kirigami.ScrollablePage {
             passwordField.showPassword = false;
             showBinaryCheck.checked = false;
             mapField.showSecret = false;
+            if (page.Kirigami.ColumnView.view.columnResizeMode === Kirigami.ColumnView.SingleColumn) {
+                page.Kirigami.ColumnView.view.currentIndex = page.Kirigami.ColumnView.index
+            }
         }
     }
     ColumnLayout {
